@@ -5,17 +5,15 @@ library(stringr)
 NEI <- readRDS("summarySCC_PM25.rds")
 SCC <- readRDS("Source_Classification_Code.rds")
 
-SCC$EI.Sector <- as.character(SCC$EI.Sector)
-SCC$SCC <- as.character(SCC$SCC)
+SCC.sub <- SCC[grepl("Coal" , SCC$Short.Name), ]
+NEI.sub <- NEI[NEI$SCC %in% SCC.sub$SCC, ]
 
-coal_df <- filter(SCC, str_detect(SCC$EI.Sector, "Coal"))
+png("Plot4.png",width=400,height=400,units="px",bg="transparent")
 
-coal_df_vector <- coal_df$SCC
+ggp <- ggplot(NEI.sub, aes(x = factor(year), y = Emissions, fill =type)) + 
+  geom_bar(stat= "identity", width = .4) + xlab("year") +
+  ylab("Coal-Related PM2.5 Emissions") + 
+  ggtitle("Total Coal-Related PM2.5 Emissions")
 
-coalemission <- NEI %>% filter(SCC %in% coal_df_vector) %>% group_by(year) %>% summarise(total = sum(Emissions))
-barplot(coalemission$total, names.arg = c("1999", "2002", "2005", "2008"), ylab = "Emissions PM2.5 (tons)", xlab = "Year", col = "blue", main = "USA Total Emissions (PM 2.5) Coal-Combustion Related Sources")
-
-png("Plot4.png")
-dev.set(2)
-dev.copy(png, "Plot4.png")
-dev.off()
+print(ggp)
+dev.off() 

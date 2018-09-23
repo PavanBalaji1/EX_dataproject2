@@ -5,16 +5,25 @@ library(stringr)
 NEI <- readRDS("summarySCC_PM25.rds")
 SCC <- readRDS("Source_Classification_Code.rds")
 
+Vhcls <- grepl("vehicle", SCC$SCC.Level.Two, ignore.case=TRUE)
+VhclsSCC <- SCC[Vhcls,]$SCC
+VhclsNEI <- NEI[NEI$SCC %in% VhclsSCC,]
+VhclsBaltimoreNEI <- VhclsNEI[VhclsNEI$fips == 24510,]
+VhclsBaltimoreNEI$city <- "Baltimore City"
+VhclsLANEI <- VhclsNEI[VhclsNEI$fips=="06037",]
+VhclsLANEI$city <- "Los Angeles County"
+bothNEI <- rbind(VhclsBaltimoreNEI,VhclsLANEI)
 
-emissionlA<- NEI %>% filter(fips %in% c("24510", "06037"), type == "ON-ROAD") %>% group_by(year, fips) %>% summarise(total = sum(Emissions))
+library(ggplot2)
 
-Location <- str_replace_all(emissionlA$fips, c("06037" = "LA County", "24510" = "Baltimore City")) 
+png("Plot6.png",width=500,height=400,units="px",bg="transparent")
 
-emissionlA$year <- as.factor(emissionlA$year) # facilitates approriate x-axis labelling
+ggp <- ggplot(bothNEI, aes(x=factor(year), y=Emissions, fill=city)) +
+  geom_bar(aes(fill=year),stat="identity") +
+  facet_grid(scales="free", space="free", .~city) +
+  guides(fill=FALSE) + theme_bw() +
+  labs(x="year", y=expression("Total PM"[2.5]*" Emission (Kilo-Tons)")) + 
+  labs(title=expression("PM"[2.5]*" Motor Vehicle Source Emissions in Baltimore & LA, 1999-2008"))
 
-ggplot(emissionlA, aes(x = year, y = total)) + geom_bar(stat = "identity", position = "dodge", aes(fill = Location)) + labs(x = "Year", y = "Total Emissions (PM2.5) tons") + ggtitle("On Road Emissions (PM2.5) Baltimore City & LA County") + theme(plot.title = element_text(hjust=0.5))
-
-png("plot6.png")
-dev.set(2)
-dev.copy(png, "emissionlA.png")
-dev.off()
+print(ggp)
+dev.off() 
